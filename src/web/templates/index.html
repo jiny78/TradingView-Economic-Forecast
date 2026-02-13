@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingView Economic Forecast</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>TradingView Economic Forecast</h1>
+        <p class="subtitle">TradingView API 기반 경제 예측 대시보드</p>
+    </header>
+
+    <main>
+        <!-- Controls -->
+        <section class="controls">
+            <div class="control-group">
+                <label for="category-select">카테고리:</label>
+                <select id="category-select">
+                    <option value="all">전체</option>
+                    <option value="indices">주요 지수</option>
+                    <option value="forex">외환</option>
+                    <option value="crypto">암호화폐</option>
+                    <option value="commodities">원자재</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="interval-select">시간대:</label>
+                <select id="interval-select">
+                    <option value="1m">1분</option>
+                    <option value="5m">5분</option>
+                    <option value="15m">15분</option>
+                    <option value="1h">1시간</option>
+                    <option value="4h">4시간</option>
+                    <option value="1d" selected>일간</option>
+                    <option value="1W">주간</option>
+                    <option value="1M">월간</option>
+                </select>
+            </div>
+            <button id="refresh-btn" onclick="loadOverview()">새로고침</button>
+        </section>
+
+        <!-- TradingView Chart Widget -->
+        <section class="chart-section">
+            <h2>실시간 차트</h2>
+            <div class="chart-controls">
+                <select id="chart-symbol-select">
+                    {% for cat_name, cat_symbols in symbols.items() %}
+                    <optgroup label="{{ cat_name | title }}">
+                        {% for key, (tv_sym, name) in cat_symbols.items() %}
+                        <option value="{{ tv_sym }}" data-name="{{ name }}">{{ name }} ({{ key }})</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <button onclick="analyzeSymbol()">분석 실행</button>
+            </div>
+            <div id="tradingview-chart" class="tv-chart-container">
+                <!-- TradingView Widget -->
+                <div class="tradingview-widget-container">
+                    <div id="tv-chart-widget"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analysis Detail -->
+        <section id="analysis-detail" class="analysis-detail" style="display:none;">
+            <h2>상세 분석 결과</h2>
+            <div class="detail-grid">
+                <div class="detail-card" id="price-card">
+                    <h3>가격 정보</h3>
+                    <div id="price-info"></div>
+                </div>
+                <div class="detail-card" id="forecast-card">
+                    <h3>예측 결과</h3>
+                    <div id="forecast-info"></div>
+                </div>
+                <div class="detail-card" id="technical-card">
+                    <h3>기술적 분석</h3>
+                    <div id="technical-info"></div>
+                </div>
+                <div class="detail-card" id="factors-card">
+                    <h3>분석 팩터</h3>
+                    <div id="factors-info"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TradingView Technical Analysis Widget -->
+        <section class="tv-widget-section">
+            <h2>TradingView 기술적 분석</h2>
+            <div class="tradingview-widget-container">
+                <div id="tv-technical-widget"></div>
+            </div>
+        </section>
+
+        <!-- Overview Table -->
+        <section class="overview-section">
+            <h2>시장 개요 및 예측</h2>
+            <div id="loading" class="loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>데이터를 불러오는 중...</p>
+            </div>
+            <table id="overview-table" class="overview-table">
+                <thead>
+                    <tr>
+                        <th>종목</th>
+                        <th>이름</th>
+                        <th>가격</th>
+                        <th>변동률</th>
+                        <th>분석</th>
+                        <th>추세</th>
+                        <th>예측</th>
+                        <th>신뢰도</th>
+                        <th>시그널</th>
+                    </tr>
+                </thead>
+                <tbody id="overview-body">
+                    <tr>
+                        <td colspan="9" class="empty-msg">
+                            '새로고침' 버튼을 눌러 데이터를 불러오세요.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- TradingView Market Overview Widget -->
+        <section class="tv-widget-section">
+            <h2>글로벌 시장 현황</h2>
+            <div class="tradingview-widget-container">
+                <div id="tv-market-widget"></div>
+            </div>
+        </section>
+
+        <!-- TradingView Economic Calendar Widget -->
+        <section class="tv-widget-section">
+            <h2>경제 캘린더</h2>
+            <div class="tradingview-widget-container">
+                <div id="tv-calendar-widget"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Powered by TradingView | Data provided for informational purposes only</p>
+    </footer>
+
+    <!-- TradingView Widget Scripts -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
