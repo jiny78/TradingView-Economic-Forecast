@@ -3,148 +3,275 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradingView Economic Forecast</title>
+    <title>EconoVision - Economic Forecast Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <h1>TradingView Economic Forecast</h1>
-        <p class="subtitle">TradingView API 기반 경제 예측 대시보드</p>
-    </header>
+    <!-- Animated Background -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
 
-    <main>
-        <!-- Controls -->
-        <section class="controls">
-            <div class="control-group">
-                <label for="category-select">카테고리:</label>
-                <select id="category-select">
-                    <option value="all">전체</option>
-                    <option value="indices">주요 지수</option>
-                    <option value="forex">외환</option>
-                    <option value="crypto">암호화폐</option>
-                    <option value="commodities">원자재</option>
-                </select>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <path d="M4 20L10 14L14 18L24 8" stroke="url(#grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18 8H24V14" stroke="url(#grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs><linearGradient id="grad" x1="4" y1="8" x2="24" y2="20"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+                </svg>
             </div>
-            <div class="control-group">
-                <label for="interval-select">시간대:</label>
-                <select id="interval-select">
-                    <option value="1m">1분</option>
-                    <option value="5m">5분</option>
-                    <option value="15m">15분</option>
-                    <option value="1h">1시간</option>
-                    <option value="4h">4시간</option>
-                    <option value="1d" selected>일간</option>
-                    <option value="1W">주간</option>
-                    <option value="1M">월간</option>
-                </select>
+            <span class="brand-text">EconoVision</span>
+            <span class="brand-badge">LIVE</span>
+        </div>
+        <div class="nav-actions">
+            <div class="nav-time" id="current-time"></div>
+            <button class="btn-icon" onclick="toggleAutoRefresh()" id="auto-refresh-btn" title="자동 새로고침">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            </button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Top Controls -->
+        <section class="controls-bar">
+            <div class="controls-left">
+                <div class="tab-group" id="category-tabs">
+                    <button class="tab active" data-category="all">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></svg>
+                        전체
+                    </button>
+                    <button class="tab" data-category="indices">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
+                        주요 지수
+                    </button>
+                    <button class="tab" data-category="forex">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M9 9h4l-2 6M15 9h-2"/></svg>
+                        외환
+                    </button>
+                    <button class="tab" data-category="crypto">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11.767 19.089c4.924.868 6.14-6.025 1.216-6.894m-1.216 6.894L5.86 18.047m5.908 1.042l-.347 1.97m1.563-8.864c4.924.869 6.14-6.025 1.215-6.893m-1.215 6.893l-3.94-.694m5.155-6.2L8.29 4.26m5.908 1.042l.348-1.97M7.48 20.364l3.126-17.727"/></svg>
+                        암호화폐
+                    </button>
+                    <button class="tab" data-category="commodities">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        원자재
+                    </button>
+                </div>
             </div>
-            <button id="refresh-btn" onclick="loadOverview()">새로고침</button>
+            <div class="controls-right">
+                <div class="select-wrapper">
+                    <select id="interval-select">
+                        <option value="1m">1분</option>
+                        <option value="5m">5분</option>
+                        <option value="15m">15분</option>
+                        <option value="1h">1시간</option>
+                        <option value="4h">4시간</option>
+                        <option value="1d" selected>일간</option>
+                        <option value="1W">주간</option>
+                        <option value="1M">월간</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="loadOverview()" id="refresh-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                    분석 시작
+                </button>
+            </div>
         </section>
 
-        <!-- TradingView Chart Widget -->
-        <section class="chart-section">
-            <h2>실시간 차트</h2>
-            <div class="chart-controls">
-                <select id="chart-symbol-select">
-                    {% for cat_name, cat_symbols in symbols.items() %}
-                    <optgroup label="{{ cat_name | title }}">
-                        {% for key, (tv_sym, name) in cat_symbols.items() %}
-                        <option value="{{ tv_sym }}" data-name="{{ name }}">{{ name }} ({{ key }})</option>
-                        {% endfor %}
-                    </optgroup>
-                    {% endfor %}
-                </select>
-                <button onclick="analyzeSymbol()">분석 실행</button>
+        <!-- Summary Cards -->
+        <section class="summary-cards" id="summary-cards" style="display:none;">
+            <div class="summary-card card-bullish" id="card-bullish">
+                <div class="summary-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l5-5 4 4 6-8"/><path d="M17 8h5v5"/></svg>
+                </div>
+                <div class="summary-info">
+                    <span class="summary-count" id="bullish-count">0</span>
+                    <span class="summary-label">상승 예측</span>
+                </div>
+            </div>
+            <div class="summary-card card-neutral" id="card-neutral">
+                <div class="summary-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="summary-info">
+                    <span class="summary-count" id="neutral-count">0</span>
+                    <span class="summary-label">보합 예측</span>
+                </div>
+            </div>
+            <div class="summary-card card-bearish" id="card-bearish">
+                <div class="summary-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7l5 5 4-4 6 8"/><path d="M17 16h5v-5"/></svg>
+                </div>
+                <div class="summary-info">
+                    <span class="summary-count" id="bearish-count">0</span>
+                    <span class="summary-label">하락 예측</span>
+                </div>
+            </div>
+            <div class="summary-card card-total" id="card-total">
+                <div class="summary-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0022 16z"/><path d="M7.5 4.21l4.5 2.6 4.5-2.6M7.5 19.79V14.6L3 12M21 12l-4.5 2.6v5.19"/></svg>
+                </div>
+                <div class="summary-info">
+                    <span class="summary-count" id="total-count">0</span>
+                    <span class="summary-label">분석 종목</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading-overlay" style="display:none;">
+            <div class="loading-content">
+                <div class="loading-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                </div>
+                <p class="loading-text">시장 데이터를 분석하고 있습니다...</p>
+                <p class="loading-sub" id="loading-progress"></p>
+            </div>
+        </div>
+
+        <!-- Market Overview Grid -->
+        <section class="market-grid" id="market-grid" style="display:none;">
+            <div class="section-header">
+                <h2>시장 분석 결과</h2>
+                <span class="section-badge" id="last-update"></span>
+            </div>
+            <div class="cards-grid" id="cards-grid">
+                <!-- Cards will be injected by JS -->
+            </div>
+        </section>
+
+        <!-- Detail Modal -->
+        <div class="modal-overlay" id="detail-modal" style="display:none;">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h2 id="modal-title">상세 분석</h2>
+                    <button class="btn-icon modal-close" onclick="closeModal()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- Detail content injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TradingView Chart Section -->
+        <section class="chart-section glass-card">
+            <div class="section-header">
+                <h2>실시간 차트</h2>
+                <div class="chart-controls">
+                    <div class="select-wrapper">
+                        <select id="chart-symbol-select">
+                            {% for cat_name, cat_symbols in symbols.items() %}
+                            <optgroup label="{{ cat_name | title }}">
+                                {% for key, (tv_sym, name) in cat_symbols.items() %}
+                                <option value="{{ tv_sym }}" data-name="{{ name }}" data-key="{{ key }}">{{ name }} ({{ key }})</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="btn-secondary" onclick="analyzeSymbol()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        상세 분석
+                    </button>
+                </div>
             </div>
             <div id="tradingview-chart" class="tv-chart-container">
-                <!-- TradingView Widget -->
                 <div class="tradingview-widget-container">
                     <div id="tv-chart-widget"></div>
                 </div>
             </div>
         </section>
 
-        <!-- Analysis Detail -->
+        <!-- Analysis Detail Section -->
         <section id="analysis-detail" class="analysis-detail" style="display:none;">
-            <h2>상세 분석 결과</h2>
+            <div class="section-header">
+                <h2>상세 분석 결과</h2>
+            </div>
             <div class="detail-grid">
-                <div class="detail-card" id="price-card">
-                    <h3>가격 정보</h3>
+                <div class="glass-card detail-card">
+                    <div class="card-header">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                        <h3>가격 정보</h3>
+                    </div>
                     <div id="price-info"></div>
                 </div>
-                <div class="detail-card" id="forecast-card">
-                    <h3>예측 결과</h3>
+                <div class="glass-card detail-card">
+                    <div class="card-header">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        <h3>예측 결과</h3>
+                    </div>
                     <div id="forecast-info"></div>
                 </div>
-                <div class="detail-card" id="technical-card">
-                    <h3>기술적 분석</h3>
+                <div class="glass-card detail-card">
+                    <div class="card-header">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                        <h3>기술적 분석</h3>
+                    </div>
                     <div id="technical-info"></div>
                 </div>
-                <div class="detail-card" id="factors-card">
-                    <h3>분석 팩터</h3>
+                <div class="glass-card detail-card">
+                    <div class="card-header">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <h3>분석 팩터</h3>
+                    </div>
                     <div id="factors-info"></div>
                 </div>
             </div>
         </section>
 
-        <!-- TradingView Technical Analysis Widget -->
-        <section class="tv-widget-section">
-            <h2>TradingView 기술적 분석</h2>
-            <div class="tradingview-widget-container">
-                <div id="tv-technical-widget"></div>
+        <!-- TradingView Widgets Row -->
+        <section class="widgets-row">
+            <div class="glass-card widget-card">
+                <div class="section-header">
+                    <h2>기술적 분석</h2>
+                </div>
+                <div class="tradingview-widget-container">
+                    <div id="tv-technical-widget"></div>
+                </div>
+            </div>
+            <div class="glass-card widget-card">
+                <div class="section-header">
+                    <h2>경제 캘린더</h2>
+                </div>
+                <div class="tradingview-widget-container">
+                    <div id="tv-calendar-widget"></div>
+                </div>
             </div>
         </section>
 
-        <!-- Overview Table -->
-        <section class="overview-section">
-            <h2>시장 개요 및 예측</h2>
-            <div id="loading" class="loading" style="display:none;">
-                <div class="spinner"></div>
-                <p>데이터를 불러오는 중...</p>
+        <!-- TradingView Market Overview -->
+        <section class="glass-card">
+            <div class="section-header">
+                <h2>글로벌 시장 현황</h2>
             </div>
-            <table id="overview-table" class="overview-table">
-                <thead>
-                    <tr>
-                        <th>종목</th>
-                        <th>이름</th>
-                        <th>가격</th>
-                        <th>변동률</th>
-                        <th>분석</th>
-                        <th>추세</th>
-                        <th>예측</th>
-                        <th>신뢰도</th>
-                        <th>시그널</th>
-                    </tr>
-                </thead>
-                <tbody id="overview-body">
-                    <tr>
-                        <td colspan="9" class="empty-msg">
-                            '새로고침' 버튼을 눌러 데이터를 불러오세요.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <!-- TradingView Market Overview Widget -->
-        <section class="tv-widget-section">
-            <h2>글로벌 시장 현황</h2>
             <div class="tradingview-widget-container">
                 <div id="tv-market-widget"></div>
             </div>
         </section>
-
-        <!-- TradingView Economic Calendar Widget -->
-        <section class="tv-widget-section">
-            <h2>경제 캘린더</h2>
-            <div class="tradingview-widget-container">
-                <div id="tv-calendar-widget"></div>
-            </div>
-        </section>
     </main>
 
-    <footer>
-        <p>Powered by TradingView | Data provided for informational purposes only</p>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="brand-text-sm">EconoVision</span>
+                <span class="footer-divider">|</span>
+                <span>TradingView API 기반 경제 예측 대시보드</span>
+            </div>
+            <div class="footer-disclaimer">
+                본 서비스는 정보 제공 목적이며, 투자 결정의 근거로 사용해서는 안 됩니다.
+            </div>
+        </div>
     </footer>
 
     <!-- TradingView Widget Scripts -->
