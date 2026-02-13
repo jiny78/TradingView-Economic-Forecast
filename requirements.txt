@@ -1,5 +1,6 @@
 tradingview-ta>=3.3.0
 flask>=3.0.0
+streamlit>=1.30.0
 pandas>=2.1.0
 numpy>=1.26.0
 scikit-learn>=1.3.0
