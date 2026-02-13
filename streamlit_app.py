@@ -368,26 +368,39 @@ if analyze_btn:
     else:
         progress_bar = st.progress(0, text="시장 데이터를 수집하고 있습니다...")
 
-        # 데이터 수집
-        market_data = fetch_multiple(symbols, interval)
-        progress_bar.progress(40, text="기술적 분석 중...")
+        try:
+            # 데이터 수집
+            market_data = fetch_multiple(symbols, interval)
+            progress_bar.progress(40, text="기술적 분석 중...")
 
-        # 분석
-        analyses = analyze_multiple(market_data)
-        progress_bar.progress(70, text="예측 생성 중...")
+            if not market_data:
+                progress_bar.empty()
+                st.error("데이터를 가져올 수 없습니다. 네트워크 연결을 확인하세요.")
+            else:
+                # 실패한 종목 알림
+                failed = set(symbols.keys()) - set(market_data.keys())
+                if failed:
+                    st.warning(f"일부 종목 데이터 수집 실패: {', '.join(failed)}")
 
-        # 예측
-        forecasts = predict_multiple(market_data)
-        progress_bar.progress(100, text="완료!")
-        progress_bar.empty()
+                # 분석
+                analyses = analyze_multiple(market_data)
+                progress_bar.progress(70, text="예측 생성 중...")
 
-        # 결과를 세션에 저장
-        st.session_state["results"] = {
-            "analyses": analyses,
-            "forecasts": forecasts,
-            "category": category,
-            "interval": interval,
-        }
+                # 예측
+                forecasts = predict_multiple(market_data)
+                progress_bar.progress(100, text="완료!")
+                progress_bar.empty()
+
+                # 결과를 세션에 저장
+                st.session_state["results"] = {
+                    "analyses": analyses,
+                    "forecasts": forecasts,
+                    "category": category,
+                    "interval": interval,
+                }
+        except Exception as e:
+            progress_bar.empty()
+            st.error(f"분석 중 오류가 발생했습니다: {e}")
 
 if "results" in st.session_state:
     res = st.session_state["results"]
@@ -481,11 +494,15 @@ if "results" in st.session_state:
 if detail_btn and selected_key:
     tv_symbol, display_name = all_symbols_flat[selected_key]
 
-    with st.spinner(f"{display_name} 분석 중..."):
-        data = fetch_analysis(tv_symbol, interval, display_name)
+    try:
+        with st.spinner(f"{display_name} 분석 중..."):
+            data = fetch_analysis(tv_symbol, interval, display_name)
+    except Exception as e:
+        st.error(f"{display_name} 데이터 수집 실패: {e}")
+        data = None
 
     if data is None:
-        st.error(f"{display_name} 데이터를 가져올 수 없습니다.")
+        st.error(f"{display_name} 데이터를 가져올 수 없습니다. 종목/시간대를 변경해 보세요.")
     else:
         a = analyze(data)
         f = predict(data)

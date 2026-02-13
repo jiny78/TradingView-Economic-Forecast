@@ -40,7 +40,7 @@ SCREENER_MAP = {
     "NASDAQ": "america",
     "NYSE": "america",
     "KRX": "korea",
-    "TVC": "america",
+    "TVC": "cfd",
     "FX_IDC": "forex",
     "BITSTAMP": "crypto",
     "BINANCE": "crypto",

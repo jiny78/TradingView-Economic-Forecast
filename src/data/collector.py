@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 
 from tradingview_ta import TA_Handler, Interval
@@ -20,6 +21,15 @@ INTERVAL_MAP = {
     "1d": Interval.INTERVAL_1_DAY,
     "1W": Interval.INTERVAL_1_WEEK,
     "1M": Interval.INTERVAL_1_MONTH,
+}
+
+# Fallback screener values to try if the primary one fails
+SCREENER_FALLBACKS = {
+    "cfd": ["america"],
+    "america": ["cfd"],
+    "korea": [],
+    "forex": [],
+    "crypto": [],
 }
 
 
@@ -56,6 +66,27 @@ def _get_screener(exchange: str) -> str:
     return SCREENER_MAP.get(exchange, "america")
 
 
+def _safe_get(indicators: dict, key: str, default=0):
+    """Safely get a value from indicators, returning default if None."""
+    val = indicators.get(key)
+    return val if val is not None else default
+
+
+def _try_fetch(symbol: str, screener: str, exchange: str, tv_interval):
+    """Attempt to fetch analysis with given screener, return Analysis or None."""
+    try:
+        handler = TA_Handler(
+            symbol=symbol,
+            screener=screener,
+            exchange=exchange,
+            interval=tv_interval,
+        )
+        return handler.get_analysis()
+    except Exception as e:
+        logger.debug("Screener '%s' failed for %s:%s - %s", screener, exchange, symbol, e)
+        return None
+
+
 def fetch_analysis(
     tv_symbol: str,
     interval: str = "1d",
@@ -72,46 +103,55 @@ def fetch_analysis(
         MarketData instance or None if the fetch fails.
     """
     exchange, symbol = _parse_exchange_symbol(tv_symbol)
-    screener = _get_screener(exchange)
+    primary_screener = _get_screener(exchange)
     tv_interval = INTERVAL_MAP.get(interval, Interval.INTERVAL_1_DAY)
 
-    try:
-        handler = TA_Handler(
-            symbol=symbol,
-            screener=screener,
-            exchange=exchange,
-            interval=tv_interval,
-        )
-        analysis = handler.get_analysis()
-    except Exception:
-        logger.exception("Failed to fetch data for %s", tv_symbol)
+    # Try primary screener first, then fallbacks
+    screeners_to_try = [primary_screener] + SCREENER_FALLBACKS.get(primary_screener, [])
+    analysis = None
+
+    for screener in screeners_to_try:
+        analysis = _try_fetch(symbol, screener, exchange, tv_interval)
+        if analysis is not None:
+            break
+
+    if analysis is None:
+        logger.warning("All screeners failed for %s", tv_symbol)
         return None
 
-    indicators = analysis.indicators
-    close = indicators.get("close", 0)
-    open_price = indicators.get("open", 0)
-    high = indicators.get("high", 0)
-    low = indicators.get("low", 0)
-    volume = indicators.get("volume", 0)
-    change = indicators.get("change", 0)
-    change_pct = (change / open_price * 100) if open_price else 0
+    try:
+        indicators = analysis.indicators or {}
+        close = _safe_get(indicators, "close", 0)
+        open_price = _safe_get(indicators, "open", 0)
+        high = _safe_get(indicators, "high", 0)
+        low = _safe_get(indicators, "low", 0)
+        volume = _safe_get(indicators, "volume", 0)
+        change = _safe_get(indicators, "change", 0)
+        change_pct = (change / open_price * 100) if open_price else 0
 
-    return MarketData(
-        symbol=symbol,
-        exchange=exchange,
-        name=display_name or symbol,
-        close=close,
-        open_price=open_price,
-        high=high,
-        low=low,
-        volume=volume,
-        change=change,
-        change_pct=change_pct,
-        indicators=indicators,
-        oscillators=analysis.oscillators,
-        moving_averages=analysis.moving_averages,
-        summary=analysis.summary,
-    )
+        summary = analysis.summary or {"RECOMMENDATION": "NEUTRAL", "BUY": 0, "SELL": 0, "NEUTRAL": 0}
+        oscillators = analysis.oscillators or {"RECOMMENDATION": "NEUTRAL", "COMPUTE": {"BUY": 0, "SELL": 0, "NEUTRAL": 0}}
+        moving_averages = analysis.moving_averages or {"RECOMMENDATION": "NEUTRAL", "COMPUTE": {"BUY": 0, "SELL": 0, "NEUTRAL": 0}}
+
+        return MarketData(
+            symbol=symbol,
+            exchange=exchange,
+            name=display_name or symbol,
+            close=close,
+            open_price=open_price,
+            high=high,
+            low=low,
+            volume=volume,
+            change=change,
+            change_pct=change_pct,
+            indicators=indicators,
+            oscillators=oscillators,
+            moving_averages=moving_averages,
+            summary=summary,
+        )
+    except Exception:
+        logger.exception("Error processing data for %s", tv_symbol)
+        return None
 
 
 def fetch_multiple(
@@ -132,4 +172,6 @@ def fetch_multiple(
         data = fetch_analysis(tv_symbol, interval, display_name)
         if data is not None:
             results[key] = data
+        # Small delay to avoid rate-limiting
+        time.sleep(0.2)
     return results
